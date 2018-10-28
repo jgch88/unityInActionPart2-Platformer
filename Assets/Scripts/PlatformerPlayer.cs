@@ -29,18 +29,42 @@ public class PlatformerPlayer : MonoBehaviour {
 		Collider2D hit = Physics2D.OverlapArea (corner1, corner2);
 
 		bool grounded = false;
-
 		if (hit != null) {
 			grounded = true;
 		}
 
+		_body.gravityScale = grounded && deltaX == 0 ? 0 : 1;
 		if (grounded && Input.GetKeyDown (KeyCode.Space)) {
 			_body.AddForce (Vector2.up * jumpForce, ForceMode2D.Impulse);
 		}
 
-		_anim.SetFloat ("speed", Mathf.Abs (deltaX));
-		if (!Mathf.Approximately (deltaX, 0)) {
-			transform.localScale = new Vector3 (Mathf.Sign (deltaX), 1, 1);
+		MovingPlatform platform = null;
+		if (hit != null) {
+			platform = hit.GetComponent<MovingPlatform> (); // Check if platform under player is MovingPlatform
 		}
+		if (platform != null) {
+			transform.parent = platform.transform; // attach player as a child of the platform
+			// i.e. set player's transform parent to the platform's transform
+			// but this causes player to scale to the platform's size/shape due to inheritance. need to counter-scale.
+		} else {
+			transform.parent = null; // detach player
+		}
+
+		_anim.SetFloat ("speed", Mathf.Abs (deltaX));
+
+		Vector3 pScale = Vector3.one;
+		if (platform != null) {
+			pScale = platform.transform.localScale;
+		}
+		if (deltaX != 0) {
+			// counter-scaling player's inheritance of parent platform's scale x and scale y
+			transform.localScale = new Vector3 (
+				Mathf.Sign (deltaX) / pScale.x, 1 / pScale.y, 1);
+		}
+
+		// This transform flips the player left and right
+		//	if (!Mathf.Approximately (deltaX, 0)) {
+		//		transform.localScale = new Vector3 (Mathf.Sign (deltaX), 1, 1);
+		//	}
 	}
 }
